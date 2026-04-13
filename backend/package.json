@@ -1,0 +1,32 @@
+{
+  "name": "markdown-notes-app-backend",
+  "version": "1.0.0",
+  "description": "Backend for markdown-notes-app. It contains API calls to create, update, store and delete notes.",
+  "keywords": [
+    "express",
+    "sqlite",
+    "backend",
+    "nodejs",
+    "markdown"
+  ],
+  "homepage": "https://github.com/SeveredSeikyo/markdown-notes-app#readme",
+  "bugs": {
+    "url": "https://github.com/SeveredSeikyo/markdown-notes-app/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SeveredSeikyo/markdown-notes-app.git"
+  },
+  "license": "ISC",
+  "author": "SeveredSeikyo",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "sqlite3": "^6.0.1"
+  }
+}
