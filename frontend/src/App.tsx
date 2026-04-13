@@ -1,120 +1,184 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useMemo, useState } from 'react'
+import api from './services/api'
+import { NotesList } from './components/NotesList'
+import { Editor } from './components/Editor'
+import { Preview } from './components/Preview'
 import './App.css'
 
+type Note = {
+  id: number
+  title: string
+  content: string
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const selectedNote = useMemo(
+    () => notes.find((note) => note.id === selectedId) ?? null,
+    [notes, selectedId]
+  )
+
+  useEffect(() => {
+    fetchNotes()
+  }, [])
+
+  useEffect(() => {
+    if (selectedNote) {
+      setTitle(selectedNote.title)
+      setContent(selectedNote.content)
+    } else {
+      setTitle('')
+      setContent('')
+    }
+  }, [selectedNote])
+
+  // Handle responsiveness
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false)
+      } else {
+        setSidebarOpen(true)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  async function fetchNotes() {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await api.get<Note[]>('/notes')
+      setNotes(Array.isArray(response.data) ? response.data : [])
+    } catch (err) {
+      console.error('Failed to fetch notes:', err)
+      setError('Could not load notes. Please check if the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function saveNote() {
+    if (!title.trim() && !content.trim()) return
+
+    setSaving(true)
+    setError(null)
+    try {
+      if (selectedId) {
+        // Many backends prefer PUT or PATCH. Let's ensure the structure is correct.
+        await api.put(`/notes/${selectedId}`, {
+          title: title.trim(),
+          content: content.trim()
+        })
+      } else {
+        const response = await api.post('/notes', {
+          title: title.trim(),
+          content: content.trim()
+        })
+        // If the backend returns the new note, we can select it
+        if (response.data && response.data.id) {
+          setSelectedId(response.data.id)
+        }
+      }
+      await fetchNotes()
+      // Optionally show a success message or just keep the note selected
+    } catch (err) {
+      console.error('Failed to save note:', err)
+      setError('Failed to save note. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deleteNote(id: number) {
+    if (!confirm('Are you sure you want to delete this note?')) return
+
+    try {
+      await api.delete(`/notes/${id}`)
+      if (selectedId === id) {
+        setSelectedId(null)
+      }
+      await fetchNotes()
+    } catch (err) {
+      console.error('Failed to delete note:', err)
+      setError('Failed to delete note.')
+    }
+  }
+
+  function startNewNote() {
+    setSelectedId(null)
+    setTitle('')
+    setContent('')
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false)
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className={`app-shell ${sidebarOpen ? 'sidebar-visible' : 'sidebar-hidden'}`}>
+      <header className="app-header">
+        <div className="brand">
+          <button
+            className="menu-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            {sidebarOpen ? '←' : '☰'}
+          </button>
+          <div className="brand-text">
+            <p className="eyebrow">Minimal</p>
+            <h1>Notes</h1>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+        <button className="new-note-btn" onClick={startNewNote}>
+          + New Note
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {error && (
+        <div className="error-banner">
+          {error}
+          <button onClick={() => setError(null)}>&times;</button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <div className="workspace">
+        <NotesList
+          notes={notes}
+          selectedId={selectedId}
+          setSelectedId={(id) => {
+            setSelectedId(id)
+            if (window.innerWidth < 768) setSidebarOpen(false)
+          }}
+          onDelete={deleteNote}
+          loading={loading}
+        />
+
+        <main className="main-content">
+          <div className="editor-preview-container">
+            <Editor
+              title={title}
+              setTitle={setTitle}
+              content={content}
+              setContent={setContent}
+              onSave={saveNote}
+              saving={saving}
+            />
+            <Preview content={content} />
+          </div>
+        </main>
+      </div>
+    </div>
   )
 }
 
