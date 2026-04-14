@@ -11,8 +11,8 @@ const frontendDevURL = process.env.FRONTEND_DEV_URL;
 
 
 var corsOptions = {
-	origin: '*',
-	methods: "GET, PUT, PATCH, POST, DELETE",
+	origin: [ frontendURL, frontendDevURL ],
+	methods: "GET, PUT, PATCH, POST, DELETE, OPTIONS",
 	preflightContinue: false,
 	optionsSuccessStatus: 200
 }
