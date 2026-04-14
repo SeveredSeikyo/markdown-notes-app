@@ -8,9 +8,6 @@ interface PreviewProps {
 export const Preview: React.FC<PreviewProps> = ({ content }) => {
   return (
     <div className="preview-panel">
-      <div className="panel-label-row">
-        <span>PREVIEW</span>
-      </div>
       <div className="preview-content">
         {content.trim() ? (
           <ReactMarkdown>{content}</ReactMarkdown>

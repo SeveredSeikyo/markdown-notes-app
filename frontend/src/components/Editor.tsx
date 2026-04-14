@@ -29,10 +29,9 @@ export const Editor: React.FC<EditorProps> = ({
             className="note-title-input"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Note title"
+            placeholder="Untitled"
             aria-label="Note title"
           />
-          <p className="help-text">Use Markdown syntax for headers and lists.</p>
         </div>
         <div className="button-group">
           {isExistingNote && (
@@ -49,17 +48,16 @@ export const Editor: React.FC<EditorProps> = ({
             onClick={onSave}
             disabled={saving || (!title.trim() && !content.trim())}
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
 
       <div className="editor-panel">
-        <label className="panel-label">EDITOR</label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="# New Note..."
+          placeholder="Start writing..."
           aria-label="Note content"
         />
       </div>

@@ -1,127 +1,64 @@
-import { useEffect, useMemo, useState } from 'react'
-import api from './services/api'
+import { useEffect, useState } from 'react'
+import { useNotes } from './hooks/useNotes'
 import { NotesList } from './components/NotesList'
 import { Editor } from './components/Editor'
 import { Preview } from './components/Preview'
 import './App.css'
 
-type Note = {
-  id: number
-  title: string
-  content: string
-}
-
 function App() {
-  const [notes, setNotes] = useState<Note[]>([])
+  const { notes, loading, error, setError, saveNote, deleteNote } = useNotes()
+  
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768)
 
-  const selectedNote = useMemo(
-    () => notes.find((note) => note.id === selectedId) ?? null,
-    [notes, selectedId]
-  )
-
+  // Sync editor with selected note
   useEffect(() => {
-    fetchNotes()
-  }, [])
-
-  useEffect(() => {
-    if (selectedNote) {
-      setTitle(selectedNote.title)
-      setContent(selectedNote.content)
+    const activeNote = notes.find(n => n.id === selectedId)
+    if (activeNote) {
+      setTitle(activeNote.title)
+      setContent(activeNote.content)
     } else {
       setTitle('')
       setContent('')
     }
-  }, [selectedNote])
+  }, [selectedId, notes])
 
-  // Handle responsiveness
+  // Handle window resizing
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setSidebarOpen(false)
-      } else {
-        setSidebarOpen(true)
-      }
+      setSidebarOpen(window.innerWidth >= 768)
     }
-    handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  async function fetchNotes() {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.get<Note[]>('/notes')
-      setNotes(Array.isArray(response.data) ? response.data : [])
-    } catch (err) {
-      console.error('Failed to fetch notes:', err)
-      setError('Could not load notes. Please check if the backend is running.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function saveNote() {
-    if (!title.trim() && !content.trim()) return
-
+  const handleSave = async () => {
     setSaving(true)
-    setError(null)
-    try {
-      if (selectedId) {
-        // Many backends prefer PUT or PATCH. Let's ensure the structure is correct.
-        await api.put(`/notes/${selectedId}`, {
-          title: title.trim(),
-          content: content.trim()
-        })
-      } else {
-        const response = await api.post('/notes', {
-          title: title.trim(),
-          content: content.trim()
-        })
-        // If the backend returns the new note, we can select it
-        if (response.data && response.data.id) {
-          setSelectedId(response.data.id)
-        }
-      }
-      await fetchNotes()
-      // Optionally show a success message or just keep the note selected
-    } catch (err) {
-      console.error('Failed to save note:', err)
-      setError('Failed to save note. Please try again.')
-    } finally {
-      setSaving(false)
+    const newId = await saveNote(selectedId, title, content)
+    if (newId) setSelectedId(newId)
+    setSaving(false)
+  }
+
+  const handleDelete = async (id: number) => {
+    const success = await deleteNote(id)
+    if (success && id === selectedId) {
+      setSelectedId(null)
     }
   }
 
-  async function deleteNote(id: number) {
-    if (!confirm('Are you sure you want to delete this note?')) return
-
-    try {
-      await api.delete(`/notes/${id}`)
-      if (selectedId === id) {
-        setSelectedId(null)
-      }
-      await fetchNotes()
-    } catch (err) {
-      console.error('Failed to delete note:', err)
-      setError('Failed to delete note.')
-    }
-  }
-
-  function startNewNote() {
+  const handleNewNote = () => {
     setSelectedId(null)
     setTitle('')
     setContent('')
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false)
-    }
+    if (window.innerWidth < 768) setSidebarOpen(false)
+  }
+
+  const handleSelectNote = (id: number) => {
+    setSelectedId(id)
+    if (window.innerWidth < 768) setSidebarOpen(false)
   }
 
   return (
@@ -133,22 +70,21 @@ function App() {
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
-            {sidebarOpen ? '←' : '☰'}
+            {sidebarOpen ? <XIcon /> : <MenuIcon />}
           </button>
           <div className="brand-text">
-            <p className="eyebrow">Minimal</p>
             <h1>Notes</h1>
           </div>
         </div>
-        <button className="new-note-btn" onClick={startNewNote}>
-          + New Note
+        <button className="new-note-btn" onClick={handleNewNote}>
+          New Note
         </button>
       </header>
 
       {error && (
         <div className="error-banner">
-          {error}
-          <button onClick={() => setError(null)}>&times;</button>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} aria-label="Dismiss error">&times;</button>
         </div>
       )}
 
@@ -156,11 +92,8 @@ function App() {
         <NotesList
           notes={notes}
           selectedId={selectedId}
-          setSelectedId={(id) => {
-            setSelectedId(id)
-            if (window.innerWidth < 768) setSidebarOpen(false)
-          }}
-          onDelete={deleteNote}
+          setSelectedId={handleSelectNote}
+          onDelete={handleDelete}
           loading={loading}
         />
 
@@ -171,8 +104,8 @@ function App() {
               setTitle={setTitle}
               content={content}
               setContent={setContent}
-              onSave={saveNote}
-              onDelete={() => selectedId && deleteNote(selectedId)}
+              onSave={handleSave}
+              onDelete={() => selectedId && handleDelete(selectedId)}
               isExistingNote={!!selectedId}
               saving={saving}
             />
@@ -183,5 +116,14 @@ function App() {
     </div>
   )
 }
+
+// Simple icons moved out of component to keep it clean
+const MenuIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+)
+
+const XIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+)
 
 export default App
