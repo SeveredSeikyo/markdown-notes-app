@@ -6,6 +6,8 @@ interface EditorProps {
   content: string
   setContent: (content: string) => void
   onSave: () => void
+  onDelete: () => void
+  isExistingNote: boolean
   saving: boolean
 }
 
@@ -15,6 +17,8 @@ export const Editor: React.FC<EditorProps> = ({
   content,
   setContent,
   onSave,
+  onDelete,
+  isExistingNote,
   saving,
 }) => {
   return (
@@ -30,13 +34,24 @@ export const Editor: React.FC<EditorProps> = ({
           />
           <p className="help-text">Use Markdown syntax for headers and lists.</p>
         </div>
-        <button
-          className="save-button"
-          onClick={onSave}
-          disabled={saving || (!title.trim() && !content.trim())}
-        >
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
+        <div className="button-group">
+          {isExistingNote && (
+            <button
+              className="delete-button-secondary"
+              onClick={onDelete}
+              title="Delete Note"
+            >
+              Delete
+            </button>
+          )}
+          <button
+            className="save-button"
+            onClick={onSave}
+            disabled={saving || (!title.trim() && !content.trim())}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
       <div className="editor-panel">

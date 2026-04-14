@@ -7,10 +7,11 @@ require('dotenv').config();
 
 const port = process.env.PORT;
 const frontendURL = process.env.FRONTEND_URL;
+const frontendDevURL = process.env.FRONTEND_DEV_URL;
 
 
 var corsOptions = {
-	origin: frontendURL,
+	origin: '*',
 	methods: "GET, PUT, PATCH, POST, DELETE",
 	preflightContinue: false,
 	optionsSuccessStatus: 200

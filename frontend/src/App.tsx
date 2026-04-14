@@ -172,6 +172,8 @@ function App() {
               content={content}
               setContent={setContent}
               onSave={saveNote}
+              onDelete={() => selectedId && deleteNote(selectedId)}
+              isExistingNote={!!selectedId}
               saving={saving}
             />
             <Preview content={content} />
