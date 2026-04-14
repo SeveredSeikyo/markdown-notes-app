@@ -5,7 +5,7 @@ const notesRouter = require('./routes/notes.routes');
 require('dotenv').config();
 
 
-const port = process.env.PORT;
+const port = process.env.PORT || 10000;
 const frontendURL = process.env.FRONTEND_URL;
 const frontendDevURL = process.env.FRONTEND_DEV_URL;
 
